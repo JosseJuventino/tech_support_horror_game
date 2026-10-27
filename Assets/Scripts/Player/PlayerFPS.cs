@@ -18,6 +18,11 @@ public class PlayerFPS : MonoBehaviour
     private float pitch;
     private float yaw;
 
+    public float jumpForce = 5f;
+
+    private InputAction jumpAction;
+    private bool jumpRequested;
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -26,6 +31,7 @@ public class PlayerFPS : MonoBehaviour
 
         moveAction = input.actions.FindAction("Move", true);
         lookAction = input.actions.FindAction("Look", true);
+        jumpAction = input.actions.FindAction("Jump", true);
 
         yaw = transform.eulerAngles.y;
 
@@ -48,6 +54,11 @@ public class PlayerFPS : MonoBehaviour
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+        }
+
+        if (jumpAction.WasPressedThisFrame())
+        {
+            jumpRequested = true;
         }
 
         if (Cursor.lockState != CursorLockMode.Locked)
@@ -74,7 +85,6 @@ public class PlayerFPS : MonoBehaviour
 
         direction = Vector3.ClampMagnitude(direction, 1f);
 
-        // Conservamos la gravedad vertical
         Vector3 velocity = rb.linearVelocity;
 
         rb.linearVelocity = new Vector3(
@@ -82,5 +92,18 @@ public class PlayerFPS : MonoBehaviour
             velocity.y,
             direction.z * speed
         );
+
+        bool isGrounded = Physics.Raycast(
+            transform.position,
+            Vector3.down,
+            1.1f
+        );
+
+        if (jumpRequested && isGrounded)
+        {
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+        }
+
+        jumpRequested = false;
     }
 }
