@@ -14,6 +14,7 @@ public class PlayerFPS : MonoBehaviour
     [SerializeField] private Animator characterAnimator;
     [SerializeField] private AudioSource salsaSource;
     [SerializeField] private Vector3 thirdPersonOffset = new Vector3(0.45f, 0.22f, -2.8f);
+    [SerializeField] private float interactDistance = 2.5f;
 
     private static readonly int Moving = Animator.StringToHash("Moving");
     private static readonly int Grounded = Animator.StringToHash("Grounded");
@@ -22,7 +23,7 @@ public class PlayerFPS : MonoBehaviour
 
     private Rigidbody rb;
     private CapsuleCollider capsule;
-    private InputAction moveAction, lookAction, jumpAction, crouchAction, danceAction, viewAction;
+    private InputAction moveAction, lookAction, jumpAction, crouchAction, danceAction, viewAction, interactAction;
     private Vector2 moveInput;
     private Vector3 standingCenter, standingCameraPosition;
     private Camera viewCamera;
@@ -49,6 +50,7 @@ public class PlayerFPS : MonoBehaviour
         crouchAction = actions.FindAction("Player/Crouch", true);
         danceAction = actions.FindAction("Player/Dance", true);
         viewAction = actions.FindAction("Player/ToggleView", true);
+        interactAction = actions.FindAction("Player/Interact", true);
         yaw = transform.eulerAngles.y;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -61,6 +63,8 @@ public class PlayerFPS : MonoBehaviour
         danceRequested |= danceAction.WasPressedThisFrame();
         if (viewAction.WasPressedThisFrame())
             thirdPerson = !thirdPerson;
+        if (interactAction.WasPressedThisFrame())
+            TryInteract();
 
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
@@ -164,6 +168,18 @@ public class PlayerFPS : MonoBehaviour
         SetDancing(false);
         danceRequested = false;
         jumpRequested = false;
+    }
+
+    private void TryInteract()
+    {
+        // Rayo desde los ojos (no desde la cámara en tercera persona); empieza dentro de la cápsula, así que no la golpea.
+        Vector3 eyes = transform.TransformPoint(new Vector3(standingCameraPosition.x, eyeHeight, standingCameraPosition.z));
+        if (Physics.Raycast(eyes, playerCamera.forward, out RaycastHit hit, interactDistance,
+            Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+        {
+            var door = hit.collider.GetComponentInParent<Door>();
+            if (door != null) door.Toggle();
+        }
     }
 
     private bool CanStand()
